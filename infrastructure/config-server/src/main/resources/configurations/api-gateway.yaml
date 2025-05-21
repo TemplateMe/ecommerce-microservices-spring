@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: file-server
+          uri: lb:http://FILE-SERVER
+          predicates:
+            - Path=/api/v1/bucket/**
+        - id: scheduling-server
+          uri: lb:http://SCHEDULING-SERVER
+          predicates:
+            - Path=/api/v1/job/**
+        - id: notification-server
+          uri: lb:http://NOTIFICATION-SERVER
+          predicates:
+            - Path=/api/v1/notification/**
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:8180/realms/ms-realm"

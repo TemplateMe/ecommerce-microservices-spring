@@ -1,0 +1,30 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  profiles:
+    active: native
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/configurations
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+server:
+  port: 8888
+logging:
+  file:
+    path: /app/logs
+    name: /app/logs/app.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

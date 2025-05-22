@@ -1,6 +1,6 @@
 package com.azsumtoshko.notification_server.configuration
 
-import com.azsumtoshko.common.domain.dto.request.AccountActivationEmailRequest
+import com.azsumtoshko.common.constant.NOTIFICATION_GROUP_ID
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.springframework.beans.factory.annotation.Value
@@ -16,25 +16,31 @@ class KafkaConfiguration {
     @Value("\${spring.kafka.bootstrap-servers}")
     private lateinit var bootstrapServers: String
 
-    @Bean
-    fun consumerFactory(): ConsumerFactory<String, AccountActivationEmailRequest> {
-        val props = mapOf(
+    private fun baseConsumerProps(): Map<String, Any> {
+        return mapOf(
             ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
             ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
             ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to JsonDeserializer::class.java,
-            ConsumerConfig.GROUP_ID_CONFIG to "notification-service-group"
-        )
-        return DefaultKafkaConsumerFactory(
-            props,
-            StringDeserializer(),
-            JsonDeserializer(AccountActivationEmailRequest::class.java)
+            ConsumerConfig.GROUP_ID_CONFIG to NOTIFICATION_GROUP_ID,
+            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest"
         )
     }
 
     @Bean
-    fun kafkaListenerContainerFactory(): ConcurrentKafkaListenerContainerFactory<String, AccountActivationEmailRequest> {
-        val factory = ConcurrentKafkaListenerContainerFactory<String, AccountActivationEmailRequest>()
-        factory.consumerFactory = consumerFactory()
+    fun kafkaListenerContainerFactory(): ConcurrentKafkaListenerContainerFactory<String, Any> {
+        val deserializer = JsonDeserializer<Any>()
+        deserializer.setRemoveTypeHeaders(false)
+        deserializer.addTrustedPackages("com.azsumtoshko.common.domain.dto.request.email.*")
+        deserializer.setUseTypeMapperForKey(true)
+
+        val consumerFactory: ConsumerFactory<String, Any> = DefaultKafkaConsumerFactory(
+            baseConsumerProps(),
+            StringDeserializer(),
+            deserializer
+        )
+
+        val factory = ConcurrentKafkaListenerContainerFactory<String, Any>()
+        factory.consumerFactory = consumerFactory
         return factory
     }
 }

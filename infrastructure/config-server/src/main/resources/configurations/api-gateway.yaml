@@ -15,7 +15,7 @@ spring:
         - id: scheduling-server
           uri: lb:http://SCHEDULING-SERVER
           predicates:
-            - Path=/api/v1/job/**
+            - Path=/api/v1/scheduling/**
         - id: notification-server
           uri: lb:http://NOTIFICATION-SERVER
           predicates:

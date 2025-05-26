@@ -1,35 +1,32 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5431/scheduling?createDatabaseIfNotExist=true
+    url: jdbc:postgresql://localhost:5431/scheduling
     username: AzSumToshko
     password: Admin123123!
     driver-class-name: org.postgresql.Driver
 
+  flyway:
+    enabled: true
+    validate-on-migrate: true
+    baseline-on-migrate: true
+    baseline-version: 0
+
   quartz:
     job-store-type: jdbc
     jdbc:
-      initialize-schema: always
+      initialize-schema: never
     properties:
       org.quartz:
         threadPool:
           threadCount: 5
         scheduler:
-          instanceName: clusteredScheduler
+          instanceName: ClusteredQuartzScheduler
           instanceId: AUTO
         jobStore:
           class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
           driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
-          tablePrefix: QRTZ_
           isClustered: true
-          clusterCheckinInterval: 20000
-        dataSource:
-          quartzDataSource:
-            provider: hikaricp
-            driver: org.postgresql.Driver
-            URL: jdbc:postgresql://localhost:5431/scheduling_db
-            user: AzSumToshko
-            password: Admin123123!
-            maxConnections: 5
+          clusterCheckinInterval: 10000
 
   jpa:
     hibernate:

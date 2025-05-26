@@ -36,6 +36,10 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-quartz")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
+	// Flyway for database migrations
+	implementation("org.flywaydb:flyway-core")
+	implementation("org.flywaydb:flyway-database-postgresql")
+
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("io.micrometer:micrometer-tracing-bridge-brave")
 	implementation("io.micrometer:micrometer-registry-prometheus")

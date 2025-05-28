@@ -1,4 +1,4 @@
-package com.azsumtoshko.scheduling_server.domain.dto
+package com.azsumtoshko.common.domain.dto.scheduling
 
 data class ResponseBodyInfo<T>(
     var errorCode: Int = 0,

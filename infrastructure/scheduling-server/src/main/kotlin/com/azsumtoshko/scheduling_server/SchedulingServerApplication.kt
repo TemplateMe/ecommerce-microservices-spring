@@ -1,6 +1,6 @@
 package com.azsumtoshko.scheduling_server
 
-import com.azsumtoshko.scheduling_server.domain.job.HttpJob
+import com.azsumtoshko.scheduling_server.job.HttpJob
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.ApplicationContext

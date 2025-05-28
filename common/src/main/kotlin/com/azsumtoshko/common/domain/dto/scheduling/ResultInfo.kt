@@ -1,4 +1,4 @@
-package com.azsumtoshko.scheduling_server.domain.dto
+package com.azsumtoshko.common.domain.dto.scheduling
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper

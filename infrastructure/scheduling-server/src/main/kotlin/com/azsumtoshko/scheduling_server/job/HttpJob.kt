@@ -1,4 +1,4 @@
-package com.azsumtoshko.scheduling_server.domain.job
+package com.azsumtoshko.scheduling_server.job
 
 import com.azsumtoshko.scheduling_server.util.HttpJobExecutor
 import org.quartz.DisallowConcurrentExecution

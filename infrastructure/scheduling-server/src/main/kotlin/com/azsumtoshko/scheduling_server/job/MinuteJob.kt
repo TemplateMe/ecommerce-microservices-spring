@@ -1,4 +1,4 @@
-package com.azsumtoshko.scheduling_server.domain.job
+package com.azsumtoshko.scheduling_server.job
 
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

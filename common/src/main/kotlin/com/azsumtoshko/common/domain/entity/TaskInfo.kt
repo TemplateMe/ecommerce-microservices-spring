@@ -1,4 +1,4 @@
-package com.azsumtoshko.scheduling_server.domain.entity
+package com.azsumtoshko.common.domain.entity
 
 import java.io.Serializable
 

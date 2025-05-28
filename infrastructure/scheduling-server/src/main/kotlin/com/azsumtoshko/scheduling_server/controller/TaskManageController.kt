@@ -1,78 +1,63 @@
 package com.azsumtoshko.scheduling_server.controller
 
-import com.azsumtoshko.scheduling_server.domain.dto.ResultInfo
-import com.azsumtoshko.scheduling_server.domain.entity.TaskInfo
+import com.azsumtoshko.common.domain.dto.response.base.ApiResponse
+import com.azsumtoshko.common.domain.entity.TaskInfo
 import com.azsumtoshko.scheduling_server.service.TaskService
-import com.azsumtoshko.scheduling_server.util.exception.ServiceException
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/v1/scheduling")
-class TaskManageController @Autowired constructor(
+class TaskManageController (
     private val taskServiceImpl: TaskService
 ) {
-    private val objectMapper = jacksonObjectMapper()
+    @GetMapping("list")
+    fun list(): ResponseEntity<ApiResponse> {
+        val response = taskServiceImpl.list()
 
-    @GetMapping("list", produces = ["application/json; charset=UTF-8"])
-    fun list(): String {
-        val infos = taskServiceImpl.list()
-        val map = mapOf(
-            "rows" to infos,
-            "total" to infos.size
-        )
-        return objectMapper.writeValueAsString(map)
+        return ResponseEntity.status(response.statusCode).body(response)
     }
 
-    @PostMapping("save", produces = ["application/json; charset=UTF-8"])
-    fun save(@ModelAttribute info: TaskInfo): String {
-        return try {
-            if (info.id == 0) {
-                taskServiceImpl.addJob(info)
-            } else {
-                taskServiceImpl.edit(info)
-            }
-            ResultInfo.success()
-        } catch (e: ServiceException) {
-            ResultInfo.error(-1, e.message ?: "Unknown error")
-        }
+    @PostMapping("create")
+    fun createTask(@ModelAttribute info: TaskInfo): ResponseEntity<ApiResponse> {
+        val response = taskServiceImpl.addJob(info)
+
+        return ResponseEntity.status(response.statusCode).body(response)
     }
 
-    @DeleteMapping("delete/{jobName}/{jobGroup}", produces = ["application/json; charset=UTF-8"])
-    fun delete(@PathVariable jobName: String, @PathVariable jobGroup: String): String {
-        return try {
-            taskServiceImpl.delete(jobName, jobGroup)
-            ResultInfo.success()
-        } catch (e: ServiceException) {
-            ResultInfo.error(-1, e.message ?: "Unknown error")
-        }
+    @PutMapping("edit")
+    fun editTask(@ModelAttribute info: TaskInfo): ResponseEntity<ApiResponse> {
+        val response = taskServiceImpl.edit(info)
+
+        return ResponseEntity.status(response.statusCode).body(response)
     }
 
-    @PatchMapping("pause/{jobName}/{jobGroup}", produces = ["application/json; charset=UTF-8"])
-    fun pause(@PathVariable jobName: String, @PathVariable jobGroup: String): String {
-        return try {
-            taskServiceImpl.pause(jobName, jobGroup)
-            ResultInfo.success()
-        } catch (e: ServiceException) {
-            ResultInfo.error(-1, e.message ?: "Unknown error")
-        }
+    @DeleteMapping("delete/{id}")
+    fun delete(@PathVariable id: Int): ResponseEntity<ApiResponse> {
+        val response = taskServiceImpl.delete(id)
+
+        return ResponseEntity.status(response.statusCode).body(response)
     }
 
-    @PatchMapping("resume/{jobName}/{jobGroup}", produces = ["application/json; charset=UTF-8"])
-    fun resume(@PathVariable jobName: String, @PathVariable jobGroup: String): String {
-        return try {
-            taskServiceImpl.resume(jobName, jobGroup)
-            ResultInfo.success()
-        } catch (e: ServiceException) {
-            ResultInfo.error(-1, e.message ?: "Unknown error")
-        }
+    @PatchMapping("pause/{id}")
+    fun pause(@PathVariable id: Int): ResponseEntity<ApiResponse> {
+        val response = taskServiceImpl.pause(id)
+
+        return ResponseEntity.status(response.statusCode).body(response)
+    }
+
+    @PatchMapping("resume/{id}")
+    fun resume(@PathVariable id: Int): ResponseEntity<ApiResponse> {
+        val response = taskServiceImpl.resume(id)
+
+        return ResponseEntity.status(response.statusCode).body(response)
     }
 }

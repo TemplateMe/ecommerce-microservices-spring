@@ -1,4 +1,4 @@
-package com.azsumtoshko.scheduling_server.domain.job
+package com.azsumtoshko.scheduling_server.job
 
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled

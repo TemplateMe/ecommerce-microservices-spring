@@ -31,8 +31,12 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-mail")
 	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 	implementation("org.springframework.boot:spring-boot-starter-web")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
 
-	implementation("jakarta.validation:jakarta.validation-api:3.1.1")
+	// Spring Cloud LoadBalancer Caffeine Cache
+	implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+	implementation("org.springframework:spring-context-support:6.2.4")
+
 	implementation("org.springframework.kafka:spring-kafka")
 
 	implementation("org.springframework.boot:spring-boot-starter-actuator")

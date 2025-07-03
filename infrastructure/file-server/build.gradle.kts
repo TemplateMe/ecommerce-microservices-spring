@@ -31,6 +31,10 @@ dependencies {
 	implementation("org.springframework.cloud:spring-cloud-starter-config")
 	implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
 
+	// Spring Cloud LoadBalancer Caffeine Cache
+	implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+	implementation("org.springframework:spring-context-support:6.2.4")
+
 	implementation("io.minio:minio:8.5.17")
 
 	implementation("org.springframework.boot:spring-boot-starter-actuator")

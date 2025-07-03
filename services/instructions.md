@@ -61,7 +61,6 @@ Append the following to the `dependencies` block in `build.gradle.kts`:
 ```kotlin
 implementation("org.jetbrains.kotlin:kotlin-reflect")
 implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 implementation("org.springframework.cloud:spring-cloud-starter-config")
 implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
 implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -69,6 +68,8 @@ implementation("io.micrometer:micrometer-tracing-bridge-brave")
 implementation("io.micrometer:micrometer-registry-prometheus")
 implementation("io.zipkin.reporter2:zipkin-reporter-brave")
 ```
+
+> **Note**: Jakarta Bean Validation, Caffeine cache, and Jackson Kotlin module dependencies are automatically provided by the `common` module.
 
 This is how the build.gradle.kts file should look like in the end (you can directly copy it):
 
@@ -97,10 +98,11 @@ extra["springCloudVersion"] = "2024.0.1"
 
 dependencies {
 	implementation(project(":common"))
+    
+        implementation("org.springframework.boot:spring-boot-starter-web")
 
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.springframework.cloud:spring-cloud-starter-config")
 	implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
 
@@ -135,7 +137,56 @@ tasks.withType<Test> {
 
 ---
 
-## 5. 📄 Convert `application.properties` to YAML
+## 5. ⚡ Add Cache Configuration
+
+Create a `configuration` directory and add the `CacheConfiguration.kt` file:
+
+* Create directory: `src/main/kotlin/com/services/{project-name}/configuration/`
+* Create file: `CacheConfiguration.kt`
+
+```kotlin
+package com.services.{project-name}.configuration
+
+import com.github.benmanes.caffeine.cache.Caffeine
+import org.springframework.cache.CacheManager
+import org.springframework.cache.annotation.EnableCaching
+import org.springframework.cache.caffeine.CaffeineCacheManager
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import java.util.concurrent.TimeUnit
+
+/**
+ * Cache configuration for Spring Cloud LoadBalancer
+ * Configures Caffeine cache to replace the default cache implementation
+ */
+@Configuration
+@EnableCaching
+class CacheConfiguration {
+
+    /**
+     * Configures Caffeine cache manager for optimal performance
+     * 
+     * @return CacheManager configured with Caffeine cache
+     */
+    @Bean
+    fun cacheManager(): CacheManager {
+        val cacheManager = CaffeineCacheManager()
+        cacheManager.setCaffeine(
+            Caffeine.newBuilder()
+                .maximumSize(1000) // Maximum number of entries
+                .expireAfterWrite(10, TimeUnit.MINUTES) // Cache expiration
+                .recordStats() // Enable cache statistics
+        )
+        return cacheManager
+    }
+}
+```
+
+> Replace `{project-name}` with your actual project name. This configuration eliminates Spring Cloud LoadBalancer cache warnings and provides optimal caching performance.
+
+---
+
+## 6. 📄 Convert `application.properties` to YAML
 
 * Rename `src/main/resources/application.properties` to `application.yaml`
 * Paste the following inside:
@@ -155,7 +206,7 @@ spring:
 
 ---
 
-## 6. 🗂️ Create Config File in Config Server
+## 7. 🗂️ Create Config File in Config Server
 
 Go to `infrastructure/config-server/src/resources/configurations/`
 
@@ -172,7 +223,7 @@ server:
 
 ---
 
-## 7. 🌐 Register Route in API Gateway
+## 8. 🌐 Register Route in API Gateway
 
 Go to `infrastructure/api-gateway/src/resources/configurations/api-gateway.yaml`
 
@@ -182,10 +233,10 @@ Go to `infrastructure/api-gateway/src/resources/configurations/api-gateway.yaml`
   - id: {project-name}
     uri: lb://{PROJECT-NAME-IN-UPPERCASE}
     predicates:
-      - Path=/api/v1/bucket/**
+      - Path=/api/v1/{path}/**
 ```
 
-> Replace `{project-name}` and `{PROJECT-NAME-IN-UPPERCASE}` accordingly.
+> Replace `{project-name}` `{path}` and `{PROJECT-NAME-IN-UPPERCASE}` accordingly.
 
 ---
 

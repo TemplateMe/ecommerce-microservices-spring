@@ -23,11 +23,17 @@ extra["springCloudVersion"] = "2024.0.1"
 dependencies {
 	implementation(project(":common"))
 
+	implementation("org.springframework.boot:spring-boot-starter-web")
+
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.springframework.cloud:spring-cloud-starter-config")
 	implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+
+	// Spring Cloud LoadBalancer Caffeine Cache
+	implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+	implementation("org.springframework:spring-context-support:6.2.4")
 
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("io.micrometer:micrometer-tracing-bridge-brave")

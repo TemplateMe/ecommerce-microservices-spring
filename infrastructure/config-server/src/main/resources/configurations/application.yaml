@@ -1,12 +1,8 @@
 # Shared in all configurations
-spring:
-  zipkin:
-    base-url: http://zipkin:9411
-
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:7777/eureka
+      defaultZone: http://localhost:8761/eureka
   instance:
     prefer-ip-address: true
 
@@ -14,10 +10,16 @@ management:
   tracing:
     sampling:
       probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
   endpoints:
     web:
       exposure:
         include: prometheus,health,info,env,metrics,trace,loggers,httptrace
+  endpoint:
+    health:
+      show-details: always
   metrics:
     export:
       prometheus:

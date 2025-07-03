@@ -1,23 +1,29 @@
 services:
+
   postgres:
     container_name: postgres
     image: postgres:16.2-alpine
     environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: AzSumToshko
-      POSTGRES_PASSWORD: Admin123123!
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Ensure UTF-8 encoding
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres:/var/lib/postgresql/data
+      # Add initialization script
+      - ./docker/INIT_DB.sql:/docker-entrypoint-initdb.d/INIT_DB.sql
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "keycloak" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d ${POSTGRES_DATABASE}"]
       interval: 10s
       timeout: 5s
       retries: 5
     ports:
-      - "5431:5432"
+      - "5431:5432" # Avoid conflict with local PostgreSQL
     networks:
       - microservices-net
     restart: unless-stopped
+
 #  youtube.com/watch?v=WGcgiegv0W0
 #  https://www.keycloak.org/server/configuration-production <-- this is for prod
 #  piotrminkowski.com/2024/03/01/microservices-with-spring-cloud-gateway-oauth2-and-keycloak/ <-- this is microservices setup
@@ -25,24 +31,39 @@ services:
     image: quay.io/keycloak/keycloak:latest
     container_name: keycloak
     environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
-      KC_DB_USERNAME: AzSumToshko
-      KC_DB_PASSWORD: Admin123123!
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin_password
+      KC_DB_URL: ${POSTGRES_KEYCLOAK_URL}
+      KC_DB_USERNAME: ${POSTGRES_USERNAME}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # Hostname configuration
       KC_HOSTNAME_STRICT: false
       KC_HOSTNAME_STRICT_HTTPS: false
       KC_HTTP_ENABLED: true
+      KC_HEALTH_ENABLED: true
+      KC_METRICS_ENABLED: true
+
+      # Development mode settings
+      KC_LOG_LEVEL: INFO
     command:
       - start-dev
     ports:
       - "8180:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - microservices-net
+    restart: always
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -55,6 +76,7 @@ services:
       - "22181:2181"
     networks:
       - microservices-net
+    restart: always
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -69,27 +91,31 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
     networks:
       - microservices-net
+    restart: always
 
   zipkin:
     image: openzipkin/zipkin
-    container_name: ms_zipkin
+    container_name: zipkin
     ports:
       - "9411:9411"
     networks:
       - microservices-net
+    restart: always
 
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
-      - ./monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./docker/monitoring/prometheus.yaml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     networks:
       - microservices-net
+    restart: always
 
   grafana:
     image: grafana/grafana:latest
@@ -97,23 +123,278 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_started
     networks:
       - microservices-net
+    restart: always
 
   minio:
     image: minio/minio
+    container_name: minio
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USERNAME}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - minio-data:/data
     command: server /data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - microservices-net
+    restart: always
+
+  # Spring Cloud Infrastructure Services
+  config-server:
+    build:
+      context: .
+      dockerfile: infrastructure/config-server/Dockerfile
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+      minio:
+        condition: service_started
+      zookeeper:
+        condition: service_started
+      zipkin:
+        condition: service_started
+      keycloak:
+        condition: service_started
+      grafana:
+        condition: service_started
+      kafka:
+        condition: service_started
+    environment:
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+
+      - POSTGRES_SCHEDULING_URL=${POSTGRES_SCHEDULING_URL}
+      - POSTGRES_KEYCLOAK_URL=${POSTGRES_KEYCLOAK_URL}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+
+      - OAUTH_JWT_ISSUER_URI=${OAUTH_JWT_ISSUER_URI}
+
+      - PROFILE=native
+      - SERVER_PORT=8888
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/
+    restart: always
+
+  discovery-server:
+    build:
+      context: .
+      dockerfile: infrastructure/discovery-server/Dockerfile
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - microservices-net
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - SERVER_PORT=8761
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/
+      - EUREKA_INSTANCE_HOSTNAME=discovery-server
+    restart: always
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infrastructure/api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - microservices-net
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - OAUTH_JWT_ISSUER_URI=${OAUTH_JWT_ISSUER_URI}
+      - SERVER_PORT=8080
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/
+    restart: always
+
+  file-server:
+    build:
+      context: .
+      dockerfile: infrastructure/file-server/Dockerfile
+    container_name: file-server
+    ports:
+      - "4444:4444"
+    networks:
+      - microservices-net
+    depends_on:
+      minio:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_URL=http://minio:9000
+      - SERVER_PORT=4444
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_APPLICATION_JSON={"eureka":{"client":{"serviceUrl":{"defaultZone":"http://discovery-server:8761/eureka/"}}}}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/
+    restart: always
+
+  notification-server:
+    build:
+      context: .
+      dockerfile: infrastructure/notification-server/Dockerfile
+    container_name: notification-server
+    ports:
+      - "2222:2222"
+    networks:
+      - microservices-net
+    depends_on:
+      kafka:
+        condition: service_started
+      discovery-server:
+        condition: service_healthy
+      api-gateway:
+        condition: service_healthy
+      file-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2222/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SPRING_MAIL_USERNAME=${SMTP_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SMTP_PASSWORD}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SERVER_PORT=2222
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_APPLICATION_JSON={"eureka":{"client":{"serviceUrl":{"defaultZone":"http://discovery-server:8761/eureka/"}}}}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/
+    restart: always
+
+  scheduling-server:
+    build:
+      context: .
+      dockerfile: infrastructure/scheduling-server/Dockerfile
+    container_name: scheduling-server
+    ports:
+      - "3333:3333"
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      api-gateway:
+        condition: service_healthy
+      file-server:
+        condition: service_healthy
+      notification-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3333/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - POSTGRES_SCHEDULING_URL=${POSTGRES_SCHEDULING_URL}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_URL=${POSTGRES_SCHEDULING_URL}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SERVER_PORT=3333
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_APPLICATION_JSON={"eureka":{"client":{"serviceUrl":{"defaultZone":"http://discovery-server:8761/eureka/"}}}}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/
+    restart: always
+
+  task-service:
+    build:
+      context: .
+      dockerfile: services/task-service/Dockerfile
+    container_name: task-service
+    ports:
+      - "3434:3434"
+    networks:
+      - microservices-net
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      api-gateway:
+        condition: service_healthy
+      file-server:
+        condition: service_healthy
+      notification-server:
+        condition: service_healthy
+      scheduling-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3434/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      - SERVER_PORT=3434
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_APPLICATION_JSON={"eureka":{"client":{"serviceUrl":{"defaultZone":"http://discovery-server:8761/eureka/"}}}}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/
+    restart: always
 
 networks:
   microservices-net:

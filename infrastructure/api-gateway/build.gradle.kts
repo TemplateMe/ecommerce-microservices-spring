@@ -29,6 +29,10 @@ dependencies {
 	implementation("org.springframework.cloud:spring-cloud-starter-gateway")
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 
+	// Spring Cloud LoadBalancer Caffeine Cache
+	implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+	implementation("org.springframework:spring-context-support:6.2.4")
+
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("io.micrometer:micrometer-tracing-bridge-brave")
 	implementation("io.micrometer:micrometer-registry-prometheus")

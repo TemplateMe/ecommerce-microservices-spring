@@ -9,19 +9,32 @@ spring:
   cloud:
     config:
       server:
+#        git:
+#          uri: https://github.com/your-org/config-repo.git
+#          search-paths: config
+#          username: your-git-username       # If private repo
+#          password: your-git-password       # Use secrets or env vars for these
         native:
           search-locations: classpath:/configurations
 management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
   endpoints:
     web:
       exposure:
-        include: prometheus,health,info
-  prometheus:
-    metrics:
-      export:
+        include: prometheus,health,info,env,metrics,trace,loggers,httptrace
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
         enabled: true
-server:
-  port: 8888
+
 logging:
   file:
     path: /app/logs

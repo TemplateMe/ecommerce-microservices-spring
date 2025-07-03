@@ -1,6 +1,3 @@
-server:
-  port: 8080
-
 spring:
   cloud:
     gateway:
@@ -25,4 +22,6 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: "http://localhost:8180/realms/ms-realm"
+          issuer-uri: ${OAUTH_JWT_ISSUER_URI}
+server:
+  port: 8080

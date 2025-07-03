@@ -11,8 +11,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: samuildobrinski@gmail.com
-    password: "rprd oigx njkq yhpk"
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
     properties:
       mail:
         smtp:
@@ -25,3 +25,32 @@ spring:
         writetimeout: 5000
 server:
   port: 2222
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    # Spring Framework
+    org.springframework: INFO
+    org.springframework.kafka: INFO
+    # Kafka Client (consumer/producer) - keep at INFO
+    org.apache.kafka.clients: INFO
+    # Kafka Broker Internals - SUPPRESS these logs
+    org.apache.kafka.common.utils: WARN
+    org.apache.kafka.coordinator: WARN
+    org.apache.kafka.log: WARN
+    org.apache.kafka.server: WARN
+    kafka.coordinator.group.GroupMetadataManager: WARN
+    kafka.log.LogManager: WARN
+    kafka.server: WARN
+    kafka.cluster: WARN
+    kafka.controller: WARN
+    state.change.logger: WARN
+    # Application specific
+    com.azsumtoshko.notification_server: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%15.15t] %-40.40logger{39} : %m%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%15.15t] %-40.40logger{39} : %m%n"
+  file:
+    path: /app/logs
+    name: /app/logs/notification-server.log

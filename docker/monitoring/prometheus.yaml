@@ -8,7 +8,7 @@ scrape_configs:
       - targets:
           - 'host.docker.internal:8080'
           - 'host.docker.internal:6666'
-          - 'host.docker.internal:7777'
+          - 'host.docker.internal:8761'
           - 'host.docker.internal:8888'
           - 'host.docker.internal:4444'
           - 'host.docker.internal:3333'

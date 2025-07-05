@@ -4,3 +4,32 @@ minio:
   secret-key: ${MINIO_SECRET_KEY}
 server:
   port: 4444
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/infrastructure/file-server/application.log
+  level:
+    com.azsumtoshko.file_server: INFO
+    io.minio: WARN
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info,env,metrics,trace,loggers,httptrace
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true

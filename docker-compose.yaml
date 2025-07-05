@@ -117,13 +117,51 @@ services:
       - microservices-net
     restart: always
 
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/monitoring/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - microservices-net
+    restart: always
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    volumes:
+      - ./docker/monitoring/promtail-config.yaml:/etc/promtail/config.yml
+      - ./logs:/var/log/spring-boot
+      - ./logs/infrastructure:/var/log/infrastructure
+      - ./logs/services:/var/log/services
+      - /var/lib/docker/containers:/var/log/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - microservices-net
+    restart: always
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/monitoring/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
     depends_on:
       prometheus:
+        condition: service_started
+      loki:
         condition: service_started
     networks:
       - microservices-net
@@ -404,3 +442,5 @@ volumes:
   postgres:
   mongo:
   minio-data:
+  loki-data:
+  grafana-data:

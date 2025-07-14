@@ -22,7 +22,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${OAUTH_JWT_ISSUER_URI}
+          # Match the external issuer URL that clients use to get tokens
+          issuer-uri: http://localhost:8180/realms/ms-realm
 server:
   port: 8080
 
